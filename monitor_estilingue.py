@@ -1,6 +1,6 @@
 # ============================================================
-# V11.1 — MONITOR ESTILINGUE (versão para GitHub Actions)
-# Roda 1 vez por dia automaticamente
+# V11.2 — MONITOR ESTILINGUE (versão para GitHub Actions)
+# Preço máximo: R$ 175,00
 # ============================================================
 import urllib.request
 import urllib.parse
@@ -15,13 +15,12 @@ from datetime import datetime
 # ============================================================
 # CONFIGURAÇÕES
 # ============================================================
-PRECO_ALVO   = 150.00
-PRECO_MIN    = 15.00
-PRECO_MAX    = 450.00
+PRECO_ALVO   = 175.00          # ← preço máximo atualizado
+PRECO_MIN    = 20.00
+PRECO_MAX    = 500.00
 REMETENTE    = "gabrielcapote@gmail.com"
 DESTINATARIO = "gabrielcapote@gmail.com"
 
-# A chave agora vem de variável de ambiente (secreto do GitHub)
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY")
 
 if not BREVO_API_KEY:
@@ -269,7 +268,7 @@ def remover_duplicados(lista):
 # ============================================================
 def enviar_email(ofertas):
     linhas = [
-        "🚨 MONITOR ESTILINGUE V11 — NOVA OFERTA",
+        "🚨 MONITOR ESTILINGUE V11.2 — NOVA OFERTA",
         f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
         f"Preço máximo configurado: R$ {PRECO_ALVO:.2f}",
         ""
@@ -306,7 +305,7 @@ def enviar_email(ofertas):
         return False
 
 # ============================================================
-# PESQUISA PRINCIPAL (roda uma única vez)
+# PESQUISA PRINCIPAL
 # ============================================================
 def pesquisar():
     print("\n" + "="*70)
@@ -355,7 +354,8 @@ def pesquisar():
 # EXECUÇÃO ÚNICA
 # ============================================================
 if __name__ == "__main__":
-    print("Monitor Estilingue V11.1 — execução agendada")
+    print("Monitor Estilingue V11.2 — execução agendada")
+    print(f"Preço máximo: R$ {PRECO_ALVO:.2f}")
     ofertas = pesquisar()
     
     if ofertas:
