@@ -1,5 +1,5 @@
 # ============================================================
-# V11.2 — MONITOR ESTILINGUE (versão para GitHub Actions)
+# V11.3 — MONITOR ESTILINGUE (versão para GitHub Actions)
 # Preço máximo: R$ 175,00
 # ============================================================
 import urllib.request
@@ -15,7 +15,7 @@ from datetime import datetime
 # ============================================================
 # CONFIGURAÇÕES
 # ============================================================
-PRECO_ALVO   = 175.00          # ← preço máximo atualizado
+PRECO_ALVO   = 175.00
 PRECO_MIN    = 20.00
 PRECO_MAX    = 500.00
 REMETENTE    = "gabrielcapote@gmail.com"
@@ -31,26 +31,48 @@ if not BREVO_API_KEY:
 # LOJAS
 # ============================================================
 LOJAS = {
-    "Mercado Livre":     "mercadolivre.com.br",
-    "Amazon":            "amazon.com.br",
-    "Shopee":            "shopee.com.br",
-    "Magazine Luiza":    "magazineluiza.com.br",
-    "Americanas":        "americanas.com.br",
-    "Casas Bahia":       "casasbahia.com.br",
-    "Extra":             "extra.com.br",
-    "Carrefour":         "carrefour.com.br",
-    "Kabum":             "kabum.com.br",
-    "Ponto Frio":        "pontofrio.com.br",
-    "Submarino":         "submarino.com.br",
-    "Shoptime":          "shoptime.com.br",
-    "Fast Shop":         "fastshop.com.br",
-    "MadeiraMadeira":    "madeiramadeira.com.br",
-    "Leroy Merlin":      "leroymerlin.com.br",
-    "Mobly":             "mobly.com.br",
-    "Camicado":          "camicado.com.br",
-    "eBay":              "ebay.com",
-    "AliExpress":        "aliexpress.com",
-    "Shopee Global":     "shopee.com",
+    # --- Lojas originais ---
+    "Mercado Livre":         "mercadolivre.com.br",
+    "Amazon":                "amazon.com.br",
+    "Shopee":                "shopee.com.br",
+    "Magazine Luiza":        "magazineluiza.com.br",
+    "Americanas":            "americanas.com.br",
+    "Casas Bahia":           "casasbahia.com.br",
+    "Extra":                 "extra.com.br",
+    "Carrefour":             "carrefour.com.br",
+    "Kabum":                 "kabum.com.br",
+    "Ponto Frio":            "pontofrio.com.br",
+    "Submarino":             "submarino.com.br",
+    "Shoptime":              "shoptime.com.br",
+    "Fast Shop":             "fastshop.com.br",
+    "MadeiraMadeira":        "madeiramadeira.com.br",
+    "Leroy Merlin":          "leroymerlin.com.br",
+    "Mobly":                 "mobly.com.br",
+    "Camicado":              "camicado.com.br",
+    "eBay":                  "ebay.com",
+    "AliExpress":            "aliexpress.com",
+    "Shopee Global":         "shopee.com",
+
+    # --- Lojas novas solicitadas ---
+    "MG Pesca":              "mgpesca.com.br",
+    "Alapuka Sports":        "alapuka.com.br",
+    "FNAC Brasil":           "fnac.com.br",
+    "Buscapé":               "buscape.com.br",
+    "Pesque Brasil":         "pesquebrasil.com.br",
+    "Empório da Pesca":      "emporiodapesca.com.br",
+    "Loja Safari":           "lojasafari.com.br",
+    "Aventura & Cia":        "aventuraecia.com.br",
+    "Ponto do Pescador":     "pontodopescador.com.br",
+    "Campesca":              "campesca.com.br",
+    "MPFishing":             "mpfishing.com.br",
+    "Caça e Pesca Schmitt":  "cacapescaschmitt.com.br",
+    "Casa do Pescador":      "casadopescador.com.br",
+    "Falcon Armas":          "falconarmas.com.br",
+    "VentureShop":           "ventureshop.com.br",
+    "Zoom":                  "zoom.com.br",
+    "Jacotei":               "jacotei.com.br",
+    "Promobit":              "promobit.com.br",
+    "Pelando":               "pelando.com.br",
 }
 
 # ============================================================
@@ -64,7 +86,7 @@ USER_AGENT = (
 HEADERS = {
     "User-Agent": USER_AGENT,
     "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,/;q=0.8",
 }
 
 def baixar(url, timeout=14):
@@ -162,9 +184,9 @@ def buscar_bing(loja, dominio):
         pagina = baixar(url)
         if not pagina:
             continue
-        blocos = re.findall(r'<li class="b_algo"[^>]*>(.*?)</li>', pagina, re.S|re.I)
+        blocos = re.findall(r'<li class="b_algo"[^>]>(.?)</li>', pagina, re.S|re.I)
         for b in blocos:
-            m = re.search(r'<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', b, re.S)
+            m = re.search(r'<a[^>]+href="([^"]+)"[^>]>(.?)</a>', b, re.S)
             if not m:
                 continue
             link = limpar_url(m.group(1))
@@ -218,6 +240,18 @@ def buscar_direto(loja, dominio):
         "leroymerlin.com.br": f"https://www.leroymerlin.com.br/search?q={termo}",
         "ebay.com": f"https://www.ebay.com/sch/i.html?_nkw={termo}",
         "aliexpress.com": f"https://pt.aliexpress.com/w/wholesale-{termo}.html",
+        # --- Novas lojas especializadas ---
+        "mgpesca.com.br": f"https://www.mgpesca.com.br/busca?q={termo}",
+        "pesquebrasil.com.br": f"https://www.pesquebrasil.com.br/busca?q={termo}",
+        "emporiodapesca.com.br": f"https://www.emporiodapesca.com.br/busca?q={termo}",
+        "aventuraecia.com.br": f"https://www.aventuraecia.com.br/busca?q={termo}",
+        "ventureshop.com.br": f"https://www.ventureshop.com.br/busca?q={termo}",
+        # --- Sites de comparação ---
+        "buscape.com.br": f"https://www.buscape.com.br/search?q={termo}",
+        "zoom.com.br": f"https://www.zoom.com.br/search?q={termo}",
+        "jacotei.com.br": f"https://www.jacotei.com.br/busca?q={termo}",
+        "promobit.com.br": f"https://www.promobit.com.br/busca/?q={termo}",
+        "pelando.com.br": f"https://www.pelando.com.br/search?q={termo}",
     }
     url = mapa.get(dominio)
     if not url:
@@ -268,7 +302,7 @@ def remover_duplicados(lista):
 # ============================================================
 def enviar_email(ofertas):
     linhas = [
-        "🚨 MONITOR ESTILINGUE V11.2 — NOVA OFERTA",
+        "🚨 MONITOR ESTILINGUE V11.3 — NOVA OFERTA",
         f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
         f"Preço máximo configurado: R$ {PRECO_ALVO:.2f}",
         ""
@@ -354,7 +388,7 @@ def pesquisar():
 # EXECUÇÃO ÚNICA
 # ============================================================
 if __name__ == "__main__":
-    print("Monitor Estilingue V11.2 — execução agendada")
+    print("Monitor Estilingue V11.3 — execução agendada")
     print(f"Preço máximo: R$ {PRECO_ALVO:.2f}")
     ofertas = pesquisar()
     
