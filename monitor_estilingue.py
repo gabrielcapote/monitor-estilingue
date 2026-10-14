@@ -1,6 +1,6 @@
 # ============================================================
-# V11.3 — MONITOR ESTILINGUE (versão para GitHub Actions)
-# Preço máximo: R$ 175,00
+# V11.4 — MONITOR ESTILINGUE (versão para GitHub Actions)
+# Preço máximo: R$ 200,00
 # ============================================================
 import urllib.request
 import urllib.parse
@@ -15,9 +15,9 @@ from datetime import datetime
 # ============================================================
 # CONFIGURAÇÕES
 # ============================================================
-PRECO_ALVO   = 175.00
+PRECO_ALVO   = 200.00
 PRECO_MIN    = 20.00
-PRECO_MAX    = 500.00
+PRECO_MAX    = 600.00
 REMETENTE    = "gabrielcapote@gmail.com"
 DESTINATARIO = "gabrielcapote@gmail.com"
 
@@ -31,7 +31,7 @@ if not BREVO_API_KEY:
 # LOJAS
 # ============================================================
 LOJAS = {
-    # --- Lojas originais ---
+    # --- Grandes marketplaces ---
     "Mercado Livre":         "mercadolivre.com.br",
     "Amazon":                "amazon.com.br",
     "Shopee":                "shopee.com.br",
@@ -53,11 +53,9 @@ LOJAS = {
     "AliExpress":            "aliexpress.com",
     "Shopee Global":         "shopee.com",
 
-    # --- Lojas novas solicitadas ---
+    # --- Lojas especializadas em pesca/caça ---
     "MG Pesca":              "mgpesca.com.br",
     "Alapuka Sports":        "alapuka.com.br",
-    "FNAC Brasil":           "fnac.com.br",
-    "Buscapé":               "buscape.com.br",
     "Pesque Brasil":         "pesquebrasil.com.br",
     "Empório da Pesca":      "emporiodapesca.com.br",
     "Loja Safari":           "lojasafari.com.br",
@@ -69,10 +67,31 @@ LOJAS = {
     "Casa do Pescador":      "casadopescador.com.br",
     "Falcon Armas":          "falconarmas.com.br",
     "VentureShop":           "ventureshop.com.br",
+
+    # --- Outras lojas sugeridas ---
+    "FNAC Brasil":           "fnac.com.br",
+    "Buscapé":               "buscape.com.br",
     "Zoom":                  "zoom.com.br",
     "Jacotei":               "jacotei.com.br",
     "Promobit":              "promobit.com.br",
     "Pelando":               "pelando.com.br",
+
+    # --- Novas lojas adicionadas nesta versão ---
+    "Cabella's":             "cabelas.com",
+    "Bass Pro Shops":        "basspro.com",
+    "AliExpress Brasil":     "aliexpress.com.br",
+    "Temu":                  "temu.com",
+    "Shein":                 "shein.com.br",
+    "Wish":                  "wish.com",
+    "DHgate":                "dhgate.com",
+    "Banggood":              "banggood.com",
+    "Gearbest":              "gearbest.com",
+    "TomTop":                "tomtop.com",
+    "LightInTheBox":         "lightinthebox.com",
+    "Mercado Shops":         "mercadolivre.com.br",
+    "Via":                   "via.com.br",
+    "Shopfy":                "shopfy.com.br",
+    "Nuvemshop":             "nuvemshop.com.br",
 }
 
 # ============================================================
@@ -240,7 +259,7 @@ def buscar_direto(loja, dominio):
         "leroymerlin.com.br": f"https://www.leroymerlin.com.br/search?q={termo}",
         "ebay.com": f"https://www.ebay.com/sch/i.html?_nkw={termo}",
         "aliexpress.com": f"https://pt.aliexpress.com/w/wholesale-{termo}.html",
-        # --- Novas lojas especializadas ---
+        # --- Lojas especializadas ---
         "mgpesca.com.br": f"https://www.mgpesca.com.br/busca?q={termo}",
         "pesquebrasil.com.br": f"https://www.pesquebrasil.com.br/busca?q={termo}",
         "emporiodapesca.com.br": f"https://www.emporiodapesca.com.br/busca?q={termo}",
@@ -252,6 +271,15 @@ def buscar_direto(loja, dominio):
         "jacotei.com.br": f"https://www.jacotei.com.br/busca?q={termo}",
         "promobit.com.br": f"https://www.promobit.com.br/busca/?q={termo}",
         "pelando.com.br": f"https://www.pelando.com.br/search?q={termo}",
+        # --- Novas lojas internacionais ---
+        "temu.com": f"https://www.temu.com/search_result.html?search_key={termo}",
+        "shein.com.br": f"https://br.shein.com/pdsearch/{termo}/",
+        "wish.com": f"https://www.wish.com/search/{termo}",
+        "dhgate.com": f"https://www.dhgate.com/wholesale/search.do?searchkey={termo}",
+        "banggood.com": f"https://www.banggood.com/search/{termo}.html",
+        "gearbest.com": f"https://www.gearbest.com/search?q={termo}",
+        "tomtop.com": f"https://www.tomtop.com/search?q={termo}",
+        "lightinthebox.com": f"https://www.lightinthebox.com/search?q={termo}",
     }
     url = mapa.get(dominio)
     if not url:
@@ -302,7 +330,7 @@ def remover_duplicados(lista):
 # ============================================================
 def enviar_email(ofertas):
     linhas = [
-        "🚨 MONITOR ESTILINGUE V11.3 — NOVA OFERTA",
+        "🚨 MONITOR ESTILINGUE V11.4 — NOVA OFERTA",
         f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
         f"Preço máximo configurado: R$ {PRECO_ALVO:.2f}",
         ""
@@ -388,7 +416,7 @@ def pesquisar():
 # EXECUÇÃO ÚNICA
 # ============================================================
 if __name__ == "__main__":
-    print("Monitor Estilingue V11.3 — execução agendada")
+    print("Monitor Estilingue V11.4 — execução agendada")
     print(f"Preço máximo: R$ {PRECO_ALVO:.2f}")
     ofertas = pesquisar()
     
