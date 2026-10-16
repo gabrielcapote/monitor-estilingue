@@ -409,7 +409,7 @@ def pesquisar():
 # ============================================================
 # EXECUÇÃO ÚNICA
 # ============================================================
-if _name_ == "_main_":
+if __name__ == "__main__":
     print("Monitor Camisa Insider V11.5 — execução agendada")
     print(f"Preço máximo: R$ {PRECO_ALVO:.2f}")
     ofertas = pesquisar()
