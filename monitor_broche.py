@@ -427,7 +427,7 @@ def pesquisar():
 # ============================================================
 # EXECUÇÃO
 # ============================================================
-if _name_ == "_main_":
+if __name__ == "__main__":
     print("Monitor Broche Coexist — execução agendada")
     print("Buscando broche/pin com símbolo Coexist (qualquer valor)")
 
