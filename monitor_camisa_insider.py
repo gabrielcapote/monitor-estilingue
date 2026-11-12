@@ -1,6 +1,7 @@
 # ============================================================
-# MONITOR VISEIRA FLAMENGO LICENCIADA
-# Preço máximo: R$ 40,00
+# MONITOR CHINELO + SUNGA FLAMENGO
+# Chinelo: até R$ 25,00 | tamanhos 43 / 43-44 / 44
+# Sunga: tamanho M | até R$ 50,00
 # ============================================================
 import html
 import json
@@ -16,8 +17,6 @@ from datetime import datetime
 # ============================================================
 # CONFIGURAÇÕES
 # ============================================================
-PRECO_ALVO = 40.00
-PRECO_MIN = 8.00
 REMETENTE = "gabrielcapote@gmail.com"
 DESTINATARIO = "gabrielcapote@gmail.com"
 
@@ -28,7 +27,41 @@ if not BREVO_API_KEY:
     raise SystemExit(1)
 
 # ============================================================
-# LOJAS E SITES (expandido)
+# PRODUTOS QUE SERÃO MONITORADOS
+# ============================================================
+PRODUTOS = [
+    {
+        "nome": "Chinelo Flamengo",
+        "preco_max": 25.00,
+        "preco_min": 5.00,
+        "keywords_obrigatorias": [r"\b(?:chinelo|sandalia|sandália|slide|slides)\b", r"\b(?:flamengo|mengao|mengão|crf)\b"],
+        "keywords_tamanho": [r"\b(?:43|43/?44|44)\b"],
+        "termos_busca": [
+            'chinelo flamengo 43',
+            'chinelo flamengo 44',
+            'chinelo flamengo 43/44',
+            'slide flamengo 43',
+            'slide flamengo 44',
+        ],
+        "assunto_email": "OFERTA: Chinelo Flamengo ≤ R$ 25",
+    },
+    {
+        "nome": "Sunga Flamengo",
+        "preco_max": 50.00,
+        "preco_min": 10.00,
+        "keywords_obrigatorias": [r"\b(?:sunga|cueca de banho|swim)\b", r"\b(?:flamengo|mengao|mengão|crf)\b"],
+        "keywords_tamanho": [r"\b(?:tamanho\s*m|tam\.?\s*m|\bM\b)"],
+        "termos_busca": [
+            'sunga flamengo M',
+            'sunga flamengo tamanho M',
+            'sunga oficial flamengo M',
+        ],
+        "assunto_email": "OFERTA: Sunga Flamengo M ≤ R$ 50",
+    },
+]
+
+# ============================================================
+# LOJAS
 # ============================================================
 LOJAS = {
     "Loja Oficial Flamengo": "loja.flamengo.com.br",
@@ -45,9 +78,6 @@ LOJAS = {
     "Buscapé": "buscape.com.br",
     "Kanui": "kanui.com.br",
     "Dafiti": "dafiti.com.br",
-    "Nike": "nike.com.br",
-    "Adidas": "adidas.com.br",
-    "Puma": "puma.com.br",
     "Casas Bahia": "casasbahia.com.br",
     "Extra": "extra.com.br",
     "Ponto": "ponto.com.br",
@@ -133,45 +163,43 @@ def eh_pagina_busca(url):
     ]
     return any(termo in url_normalizada for termo in termos)
 
-def extrair_titulo(pagina, fallback="Viseira Flamengo"):
+def extrair_titulo(pagina, fallback="Produto Flamengo"):
     match = re.search(r"<title[^>]*>(.*?)</title>", pagina or "", flags=re.I | re.S)
     if not match:
-        return fallback[:100]
+        return fallback[:120]
     titulo = limpar_tags(match.group(1))
     titulo = re.sub(r"\s+", " ", titulo).strip()
-    return titulo[:100] or fallback[:100]
+    return titulo[:120] or fallback[:120]
 
 # ============================================================
 # FILTRO DE PRODUTO
 # ============================================================
-def produto_ok(texto):
+def produto_ok(texto, produto):
     texto_normalizado = normalizar(texto)
 
-    # Deve ser viseira
-    eh_viseira = bool(re.search(r"\b(?:viseira|visor)\b", texto_normalizado))
-    if not eh_viseira:
-        return False
+    # Verifica palavras obrigatórias
+    for padrao in produto["keywords_obrigatorias"]:
+        if not re.search(padrao, texto_normalizado, flags=re.I):
+            return False
 
-    # Deve ser Flamengo
-    eh_flamengo = bool(re.search(r"\b(?:flamengo|mengao|crf)\b", texto_normalizado))
-    if not eh_flamengo:
-        return False
+    # Verifica tamanho (quando especificado)
+    if produto.get("keywords_tamanho"):
+        tem_tamanho = any(
+            re.search(padrao, texto_normalizado, flags=re.I)
+            for padrao in produto["keywords_tamanho"]
+        )
+        if not tem_tamanho:
+            return False
 
-    marcas_oficiais = [
-        "new era", "starter", "adidas", "supercap", "nike",
-        "puma", "reebok", "under armour", "umbro"
-    ]
-    termos_licenca = ["licenciado", "oficial", "original", "autorizado"]
+    return True
 
-    tem_marca = any(marca in texto_normalizado for marca in marcas_oficiais)
-    tem_termo_licenca = any(termo in texto_normalizado for termo in termos_licenca)
-
-    return tem_marca or tem_termo_licenca
-
-def extrair_precos_contexto(texto, distancia=350):
+def extrair_precos_contexto(texto, produto, distancia=400):
     texto_normalizado = normalizar(texto)
     posicoes = []
-    for termo in ["viseira", "flamengo", "mengao", "crf"]:
+
+    # Pega posições das palavras-chave principais
+    palavras = ["flamengo", "mengao", "mengão", "crf", "chinelo", "sunga", "slide"]
+    for termo in palavras:
         inicio = 0
         while True:
             posicao = texto_normalizado.find(termo, inicio)
@@ -193,7 +221,7 @@ def extrair_precos_contexto(texto, distancia=350):
         try:
             valor = match.group(1).replace(".", "").replace(" ", "").replace(",", ".")
             valor = float(valor)
-            if PRECO_MIN <= valor <= PRECO_ALVO:
+            if produto["preco_min"] <= valor <= produto["preco_max"]:
                 precos.append(valor)
         except ValueError:
             continue
@@ -203,19 +231,17 @@ def extrair_precos_contexto(texto, distancia=350):
 # ============================================================
 # BUSCAS
 # ============================================================
-def buscar_bing(loja, dominio):
+def buscar_bing(loja, dominio, termo):
     consultas = [
-        f'site:{dominio} "viseira" "flamengo" ("licenciado" OR "oficial" OR "new era" OR "starter" OR "adidas")',
-        f"site:{dominio} viseira flamengo oficial",
-        f"site:{dominio} viseira flamengo licenciado",
-        f"site:{dominio} viseira crf oficial",
+        f'site:{dominio} {termo}',
+        f'site:{dominio} "{termo}"',
     ]
 
     resultados = []
     for consulta in consultas:
         url = "https://www.bing.com/search?" + urllib.parse.urlencode({
             "q": consulta,
-            "count": "20",
+            "count": "15",
             "setlang": "pt-BR",
         })
         pagina = baixar(url)
@@ -245,15 +271,14 @@ def buscar_bing(loja, dominio):
                 "snippet": "",
                 "origem": "bing",
             })
-        time.sleep(0.7)
+        time.sleep(0.6)
 
     return resultados
 
-def buscar_google_shopping():
-    consulta = "viseira Flamengo oficial licenciado"
+def buscar_google_shopping(termo):
     url = "https://www.google.com/search?" + urllib.parse.urlencode({
         "tbm": "shop",
-        "q": consulta,
+        "q": termo,
         "hl": "pt-BR",
         "gl": "br",
     })
@@ -275,12 +300,12 @@ def buscar_google_shopping():
             "snippet": "",
             "origem": "google",
         })
-    return resultados[:18]
+    return resultados[:15]
 
 # ============================================================
 # ANÁLISE DAS PÁGINAS
 # ============================================================
-def analisar(candidato):
+def analisar(candidato, produto):
     url = candidato.get("url", "")
     if not url or eh_pagina_busca(url):
         return None
@@ -291,16 +316,17 @@ def analisar(candidato):
 
     texto = candidato.get("title", "") + "\n" + limpar_tags(pagina)
 
-    if not produto_ok(texto):
+    if not produto_ok(texto, produto):
         return None
 
-    precos = extrair_precos_contexto(texto)
+    precos = extrair_precos_contexto(texto, produto)
     if not precos:
         return None
 
-    titulo = extrair_titulo(pagina, candidato.get("title", "Viseira Flamengo"))
+    titulo = extrair_titulo(pagina, candidato.get("title", produto["nome"]))
 
     return {
+        "produto": produto["nome"],
         "loja": candidato.get("loja", "Loja não identificada"),
         "url": url,
         "preco": min(precos),
@@ -322,14 +348,13 @@ def remover_duplicados(candidatos):
     return final
 
 # ============================================================
-# ENVIO DE E-MAIL PELA BREVO
+# ENVIO DE E-MAIL
 # ============================================================
-def enviar_email(ofertas):
+def enviar_email(ofertas, produto):
     linhas = [
-        "MONITOR VISEIRA FLAMENGO — NOVA OFERTA",
+        f"MONITOR {produto['nome'].upper()} — NOVA OFERTA",
         f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
-        f"Preço máximo configurado: R$ {PRECO_ALVO:.2f}",
-        "Filtro utilizado: Licenciado/Oficial",
+        f"Preço máximo configurado: R$ {produto['preco_max']:.2f}",
         "",
     ]
 
@@ -343,9 +368,9 @@ def enviar_email(ofertas):
         ])
 
     payload = {
-        "sender": {"name": "Monitor Viseira Flamengo", "email": REMETENTE},
+        "sender": {"name": f"Monitor {produto['nome']}", "email": REMETENTE},
         "to": [{"email": DESTINATARIO}],
-        "subject": "OFERTA: Viseira Flamengo Licenciada ≤ R$ 40",
+        "subject": produto["assunto_email"],
         "textContent": "\n".join(linhas),
     }
 
@@ -375,26 +400,31 @@ def enviar_email(ofertas):
 # ============================================================
 # PESQUISA PRINCIPAL
 # ============================================================
-def pesquisar():
+def pesquisar(produto):
     print()
     print("=" * 70)
-    print("Iniciando busca —", datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+    print(f"Buscando: {produto['nome']} —", datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+    print(f"Preço máximo: R$ {produto['preco_max']:.2f}")
     print("=" * 70)
 
     candidatos = []
 
-    print("→ Google Shopping")
-    try:
-        candidatos.extend(buscar_google_shopping())
-    except Exception as erro:
-        print(f"  Erro no Google Shopping: {erro}")
-
-    for loja, dominio in LOJAS.items():
-        print(f"→ {loja}")
+    # Google Shopping
+    for termo in produto["termos_busca"]:
+        print(f"→ Google Shopping: {termo}")
         try:
-            candidatos.extend(buscar_bing(loja, dominio))
+            candidatos.extend(buscar_google_shopping(termo))
         except Exception as erro:
-            print(f"  Erro no Bing: {erro}")
+            print(f"  Erro no Google Shopping: {erro}")
+
+    # Bing por loja
+    for loja, dominio in LOJAS.items():
+        for termo in produto["termos_busca"]:
+            print(f"→ {loja} | {termo}")
+            try:
+                candidatos.extend(buscar_bing(loja, dominio, termo))
+            except Exception as erro:
+                print(f"  Erro no Bing: {erro}")
 
     candidatos = remover_duplicados(candidatos)
     print()
@@ -404,7 +434,7 @@ def pesquisar():
     for indice, candidato in enumerate(candidatos, start=1):
         print(f"\rAnalisando {indice}/{len(candidatos)}", end="", flush=True)
         try:
-            oferta = analisar(candidato)
+            oferta = analisar(candidato, produto)
             if not oferta:
                 continue
 
@@ -426,21 +456,21 @@ def pesquisar():
 # EXECUÇÃO
 # ============================================================
 if __name__ == "__main__":
-    print("Monitor Viseira Flamengo — execução agendada")
-    print(f"Preço máximo: R$ {PRECO_ALVO:.2f}")
+    print("Monitor Chinelo + Sunga Flamengo — execução agendada")
 
-    ofertas = pesquisar()
+    for produto in PRODUTOS:
+        ofertas = pesquisar(produto)
 
-    if ofertas:
-        print()
-        print(f"{len(ofertas)} oferta(s) encontrada(s)!")
-        for oferta in ofertas:
-            print(f"  → {oferta['loja']} | R$ {oferta['preco']:.2f} | {oferta['titulo'][:60]}")
+        if ofertas:
+            print()
+            print(f"{len(ofertas)} oferta(s) encontrada(s) para {produto['nome']}!")
+            for oferta in ofertas:
+                print(f"  → {oferta['loja']} | R$ {oferta['preco']:.2f} | {oferta['titulo'][:70]}")
 
-        if enviar_email(ofertas):
-            print("E-mail enviado com sucesso.")
+            if enviar_email(ofertas, produto):
+                print("E-mail enviado com sucesso.")
+            else:
+                print("Falha no envio do e-mail.")
         else:
-            print("Falha no envio do e-mail.")
-    else:
-        print()
-        print("Nenhuma oferta licenciada dentro do preço máximo.")
+            print()
+            print(f"Nenhuma oferta de {produto['nome']} dentro do preço máximo.")
