@@ -1,6 +1,5 @@
 # ============================================================
-# MONITOR ALBUMINA (NATUROVOS + EGGPRO) 1KG
-# Preço máximo: R$ 60,00
+# MONITOR ALBUMINA 1KG (NATUROVOS, EGGPRO E GROWTH)
 # ============================================================
 import html
 import json
@@ -14,10 +13,10 @@ import urllib.request
 from datetime import datetime
 
 # ============================================================
-# CONFIGURAÇÕES
+# CONFIGURAÇÕES GERAIS
 # ============================================================
 PRECO_MIN = 20.00
-PRECO_ALVO = 60.00
+PRECO_ALVO = 70.00  # O teto geral (Growth). O código filtra os outros abaixo.
 
 REMETENTE = "gabrielcapote@gmail.com"
 DESTINATARIO = "gabrielcapote@gmail.com"
@@ -137,11 +136,12 @@ def produto_ok(texto):
     if not re.search(r"\b(?:1\s*kg|1000\s*g)\b", texto_normalizado):
         return False
 
-    # 3. Tem que ser Naturovos OU EggPro (aceita variações de escrita)
+    # 3. Tem que ser de uma das 3 marcas permitidas
     eh_naturovos = bool(re.search(r"\bnaturovos\b", texto_normalizado))
     eh_eggpro = bool(re.search(r"\begg\s*pro\b", texto_normalizado))
+    eh_growth = bool(re.search(r"\bgrowth\b", texto_normalizado))
     
-    if not (eh_naturovos or eh_eggpro):
+    if not (eh_naturovos or eh_eggpro or eh_growth):
         return False
 
     return True
@@ -149,7 +149,7 @@ def produto_ok(texto):
 def extrair_precos_contexto(texto, distancia=400):
     texto_normalizado = normalizar(texto)
     posicoes = []
-    for termo in ["albumina", "naturovos", "eggpro", "egg pro", "1kg", "1000g"]:
+    for termo in ["albumina", "naturovos", "eggpro", "egg pro", "growth", "1kg", "1000g"]:
         inicio = 0
         while True:
             posicao = texto_normalizado.find(termo, inicio)
@@ -184,9 +184,9 @@ def extrair_precos_contexto(texto, distancia=400):
 def buscar_bing(loja, dominio):
     consultas = [
         f'site:{dominio} "albumina" "naturovos" "1kg"',
-        f'site:{dominio} albumina naturovos 1kg',
         f'site:{dominio} "albumina eggpro" 1kg',
         f'site:{dominio} "albumina egg pro" 1kg',
+        f'site:{dominio} "albumina growth" 1kg',
     ]
 
     resultados = []
@@ -217,8 +217,7 @@ def buscar_bing(loja, dominio):
     return resultados
 
 def buscar_google_shopping():
-    # Busca os dois produtos no Google Shopping
-    consulta = 'albumina (naturovos OR eggpro OR "egg pro") 1kg'
+    consulta = 'albumina (naturovos OR eggpro OR "egg pro" OR growth) 1kg'
     url = "https://www.google.com/search?" + urllib.parse.urlencode({
         "tbm": "shop", "q": consulta, "hl": "pt-BR", "gl": "br",
     })
@@ -238,7 +237,7 @@ def buscar_google_shopping():
     return resultados[:20]
 
 # ============================================================
-# ANÁLISE DAS PÁGINAS
+# ANÁLISE DAS PÁGINAS (COM REGRAS DE PREÇO DIFERENTES)
 # ============================================================
 def analisar(candidato):
     url = candidato.get("url", "")
@@ -247,14 +246,29 @@ def analisar(candidato):
     pagina = baixar(url, timeout=12)
     if not pagina: return None
 
-    texto = candidato.get("title", "") + "\n" + limpar_tags(pagina)
-    if not produto_ok(texto): return None
+    texto_completo = candidato.get("title", "") + "\n" + limpar_tags(pagina)
+    
+    if not produto_ok(texto_completo): return None
 
-    precos = extrair_precos_contexto(texto)
+    precos = extrair_precos_contexto(texto_completo)
     if not precos: return None
 
+    # AQUI ESTÁ A REGRA DE PREÇO ESPECÍFICA
+    texto_normalizado = normalizar(texto_completo)
+    if "growth" in texto_normalizado:
+        limite_desta_marca = 70.00
+        marca_identificada = "Growth"
+    else:
+        limite_desta_marca = 60.00
+        marca_identificada = "Naturovos/EggPro"
+
     preco = min(precos)
-    titulo = extrair_titulo(pagina, candidato.get("title", "Albumina 1kg"))
+    
+    # Se o preço for maior que o limite específico da marca, ignora
+    if preco > limite_desta_marca:
+        return None
+
+    titulo = extrair_titulo(pagina, candidato.get("title", f"Albumina {marca_identificada} 1kg"))
 
     return {
         "loja": candidato.get("loja", "Loja não identificada"),
@@ -262,6 +276,7 @@ def analisar(candidato):
         "preco": preco,
         "titulo": titulo,
         "origem": candidato.get("origem", ""),
+        "marca": marca_identificada
     }
 
 def remover_duplicados(candidatos):
@@ -283,14 +298,14 @@ def enviar_email(ofertas):
     linhas = [
         "MONITOR ALBUMINA 1KG — NOVA OFERTA",
         f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
-        f"Preço máximo configurado: R$ {PRECO_ALVO:.2f}",
-        "Produtos: Naturovos ou EggPro",
+        "Regras: Naturovos/EggPro (até R$60) | Growth (até R$70)",
         "",
     ]
 
     for oferta in ofertas:
         linhas.extend([
             f"Loja: {oferta['loja']}",
+            f"Marca: {oferta['marca']}",
             f"Preço: R$ {oferta['preco']:.2f}",
             f"Produto: {oferta['titulo']}",
             f"Link: {oferta['url']}",
@@ -300,7 +315,7 @@ def enviar_email(ofertas):
     payload = {
         "sender": {"name": "Monitor Albumina", "email": REMETENTE},
         "to": [{"email": DESTINATARIO}],
-        "subject": "OFERTA: Albumina (Naturovos ou EggPro) 1kg encontrada",
+        "subject": "OFERTA: Albumina 1kg (Naturovos/EggPro/Growth) encontrada",
         "textContent": "\n".join(linhas),
     }
 
@@ -360,17 +375,17 @@ def pesquisar():
 # EXECUÇÃO
 # ============================================================
 if __name__ == "__main__":
-    print("Monitor Albumina (Naturovos/EggPro) — execução agendada")
+    print("Monitor Albumina (3 marcas) — execução agendada")
     ofertas = pesquisar()
 
     if ofertas:
         print(f"{len(ofertas)} oferta(s) encontrada(s)!")
         for oferta in ofertas:
-            print(f"  → {oferta['loja']} | R$ {oferta['preco']:.2f} | {oferta['titulo'][:70]}")
+            print(f"  → {oferta['loja']} | {oferta['marca']} | R$ {oferta['preco']:.2f} | {oferta['titulo'][:50]}")
 
         if enviar_email(ofertas):
             print("E-mail enviado com sucesso.")
         else:
             print("Falha no envio do e-mail.")
     else:
-        print("Nenhuma oferta de Albumina (Naturovos/EggPro) 1kg dentro do preço máximo.")
+        print("Nenhuma oferta de Albumina dentro dos limites de preço.")
